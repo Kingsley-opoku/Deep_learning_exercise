@@ -15,32 +15,37 @@ class NumberPredictor:
         self.n_digits=n_digits
         self.images_load= self.image_loader()
         
-        
+    
     
 
     def image_loader(self):
         
         
-        digits = cv2.imread(self.img_path)
-
-        gray_digits = cv2.cvtColor(digits, cv2.COLOR_BGR2GRAY)
+        mat = cv2.imread(self.img_path)
+        rgb_img=cv2.cvtColor(mat, cv2.COLOR_BGR2RGB)
+        gray=mat.copy()
+        gray_digits = cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)
 
         return  gray_digits
 
 
     
-    def preprocess( self)->list:
+    def preprocess(self)->list:
         
         
-        _, threshold = cv2.threshold(self.images_load, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
-
+        _, threshold = cv2.threshold(self.images_load, 100,255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+        
         
         dilated = cv2.dilate(threshold, (3, 3), iterations=5)
-
+        
         # find contours
         contours, _ = cv2.findContours(
             dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        
         sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        plt.imshow(sorted_contours)
+        plt.show()
         final_contours = sorted_contours[:self.n_digits]
 
        
@@ -62,7 +67,7 @@ class NumberPredictor:
 
 
 
-    def predict(self):
+    def predict(self,mat):
         
         transform = transforms.Compose([
             transforms.ToTensor(),
@@ -71,21 +76,23 @@ class NumberPredictor:
 
         self.model.eval()
         with torch.no_grad():
-            trsf_digit = transform(self.preprocess()).unsqueeze(0)
+            trsf_digit = transform(mat).unsqueeze(0)
             logsoft = self.model(trsf_digit)
             return torch.argmax(logsoft, 1)
 
 
     def show_digits(self):
         string_digits = ''
-        for digit in self.predict():
+        for digit in self.preprocess():
             string_digits += str(self.predict(digit).item())
         print(string_digits)
 
 
 
 if __name__=='__main__':
-    numbers=NumberPredictor(model, img_path='codenum.jpeg')
+    numbers=NumberPredictor(model, img_path='digits/codenum.jpeg')
     numbers.show_digits()
 
-    
+mat=cv2.imread('digits/codenum.jpeg')
+
+print(type(mat))
